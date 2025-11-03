@@ -192,7 +192,7 @@
             background:#2b2f33;color:#fff;padding:8px 10px;cursor:grab;
             font-weight:700;font-size:13px;
         `;
-        header.innerHTML = `<span style="pointer-events:none;">Calculator (Desmos)</span>`;
+        header.innerHTML = `<span style="pointer-events:none;">Calculator</span>`;
         const headerBtns = document.createElement('div');
         headerBtns.style.cssText = 'display:flex;gap:6px;align-items:center;';
 
