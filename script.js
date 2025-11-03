@@ -48,7 +48,7 @@
 
         const startBtn = btn('Start Speedrunner', '#16a34a', '#fff');
         const stopBtn  = btn('Stop Speedrunner',  '#ef4444', '#fff');
-        stopBtn.style.marginBottom = '6px';
+        stopBtn.style.marginBottom = '12px';
 
         c1.appendChild(startBtn);
         c1.appendChild(stopBtn);
