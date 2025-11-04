@@ -61,6 +61,10 @@
         const calcBtn = btn('Open Calculator', '#0ea5a4', '#fff');
         c1.appendChild(calcBtn);
 
+        // NEW: Open AI button (same color/style as calculator)
+        const openAiBtn = btn('Open AI', '#0ea5a4', '#fff');
+        c1.appendChild(openAiBtn);
+
         cols.appendChild(c1);
         cols.appendChild(c2);
         p.appendChild(cols);
@@ -72,6 +76,7 @@
         draggable(p, h);
 
         calcBtn.onclick = () => openCalculator();
+        openAiBtn.onclick = () => openOpenAI(); // hook up new button
     }
 
     function column() {
@@ -313,6 +318,119 @@
             errNotice.textContent = 'Desmos failed to load.';
             body.appendChild(errNotice);
         });
+
+        panel.addEventListener('mousedown', () => {
+            panel.style.zIndex = 2147483648;
+        });
+    }
+
+    // NEW: Open AI panel that embeds the given URL in an iframe, same header & size as calculator
+    function openOpenAI() {
+        const existingPanel = document.getElementById('mp-openai-panel');
+        if (existingPanel) {
+            existingPanel.style.display = existingPanel.style.display === 'none' ? '' : existingPanel.style.display;
+            existingPanel.style.zIndex = 2147483648;
+            return;
+        }
+
+        const panel = document.createElement('div');
+        panel.id = 'mp-openai-panel';
+        panel.style.cssText = `
+            position:fixed;left:12px;top:12px;width:420px;height:500px;z-index:2147483648;
+            background:#fff;color:#111;border-radius:8px;border:1px solid #bbb;
+            box-shadow:0 8px 30px rgba(0,0,0,.4);font-family:Arial,Helvetica,sans-serif;
+            box-sizing:border-box;user-select:none;padding:0;overflow:hidden;
+        `;
+
+        const header = document.createElement('div');
+        header.style.cssText = `
+            display:flex;align-items:center;justify-content:space-between;
+            background:#2b2f33;color:#fff;padding:8px 10px;cursor:grab;
+            font-weight:700;font-size:13px;
+        `;
+        header.innerHTML = `<span style="pointer-events:none;">Open AI</span>`;
+        const headerBtns = document.createElement('div');
+        headerBtns.style.cssText = 'display:flex;gap:6px;align-items:center;';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.title = 'Close';
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `
+            background:transparent;border:0;color:inherit;cursor:pointer;padding:2px 6px;
+            font-size:14px;
+        `;
+        headerBtns.appendChild(closeBtn);
+        header.appendChild(headerBtns);
+        panel.appendChild(header);
+
+        const body = document.createElement('div');
+        body.id = 'mp-openai-body';
+        body.style.cssText = `
+            width:100%;height:calc(100% - 42px);padding:0;box-sizing:border-box;
+            background:transparent;display:flex;flex-direction:column;
+        `;
+
+        // iframe that embeds the requested page
+        const iframe = document.createElement('iframe');
+        iframe.src = 'https://supergamer474.github.io/cerebras-web/';
+        iframe.style.cssText = 'width:100%;height:100%;border:0;display:block;';
+        iframe.setAttribute('title', 'Open AI Embed');
+        // allow fullscreen & basic features
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('loading', 'lazy');
+
+        body.appendChild(iframe);
+        panel.appendChild(body);
+        document.body.appendChild(panel);
+
+        if (typeof draggable === 'function') {
+            draggable(panel, header);
+        } else {
+            (function simpleDrag() {
+                let dragging = false, ox = 0, oy = 0;
+                const move = e => {
+                    const x = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0] && e.touches[0].clientX);
+                    const y = (e.clientY !== undefined) ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY);
+                    if (!dragging || x == null) return;
+                    panel.style.left = (x - ox) + 'px';
+                    panel.style.top  = (y - oy) + 'px';
+                    panel.style.right = '';
+                };
+                const up = () => {
+                    dragging = false;
+                    document.removeEventListener('mousemove', move);
+                    document.removeEventListener('mouseup', up);
+                    document.removeEventListener('touchmove', move);
+                    document.removeEventListener('touchend', up);
+                    header.style.cursor = 'grab';
+                };
+                header.addEventListener('mousedown', e => {
+                    dragging = true;
+                    const r = panel.getBoundingClientRect();
+                    ox = e.clientX - r.left;
+                    oy = e.clientY - r.top;
+                    document.addEventListener('mousemove', move);
+                    document.addEventListener('mouseup', up);
+                    header.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+                header.addEventListener('touchstart', e => {
+                    dragging = true;
+                    const t = e.touches[0];
+                    const r = panel.getBoundingClientRect();
+                    ox = t.clientX - r.left;
+                    oy = t.clientY - r.top;
+                    document.addEventListener('touchmove', move);
+                    document.addEventListener('touchend', up);
+                    header.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+            })();
+        }
+
+        closeBtn.onclick = () => {
+            panel.remove();
+        };
 
         panel.addEventListener('mousedown', () => {
             panel.style.zIndex = 2147483648;
