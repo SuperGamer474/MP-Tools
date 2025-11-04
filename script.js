@@ -1525,7 +1525,7 @@ function updateTokenCount() {
     if (!elements.promptEditor || !elements.tokenCounter) return;
     const text = elements.promptEditor.innerText || '';
     const tokenEstimate = Math.ceil(text.length / 4);
-    elements.tokenCounter.textContent = \`~${tokenEstimate} tokens\`;
+    elements.tokenCounter.textContent = \`~\${tokenEstimate} tokens\`;
 }
 
 function initializeSettingsUI() {
@@ -1833,7 +1833,7 @@ function handleFileUpload(e) {
             const reader = new FileReader();
             reader.onload = function (event) {
                 const fileContent = event.target.result;
-                const formattedContent = \`\n\nFile: ${file.name}\n${'='.repeat(file.name.length + 6)}\n${fileContent}\n${'='.repeat(file.name.length + 6)}\n\n\`;
+                const formattedContent = \`\n\nFile: \${file.name}\n\${'='.repeat(file.name.length + 6)}\n\${fileContent}\n\${'='.repeat(file.name.length + 6)}\n\n\`;
                 if (elements.promptEditor) elements.promptEditor.innerHTML += formattedContent.replace(/\n/g, '<br>');
                 filesProcessed++;
                 if (filesProcessed === files.length) {
@@ -2261,7 +2261,7 @@ async function callApi(waitingIndicator) {
 
         const errorElement = document.createElement('div');
         errorElement.className = 'error-message';
-        errorElement.innerHTML = \`\n            <div class="d-flex justify-content-between align-items-start">\n                <div>\n                    <i class="fas fa-exclamation-circle me-2"></i>\n                    <strong>Error:</strong> ${error.message || 'Something went wrong'}\n                </div>\n                <button class="btn btn-sm btn-danger retry-btn">\n                    <i class="fas fa-redo-alt me-1"></i> Retry\n                </button>\n            </div>\n        \`;
+        errorElement.innerHTML = \`\n <div class="d-flex justify-content-between align-items-start">\n <div>\n <i class="fas fa-exclamation-circle me-2"></i>\n <strong>Error:</strong> \${error.message || 'Something went wrong'}\n </div>\n <button class="btn btn-sm btn-danger retry-btn">\n <i class="fas fa-redo-alt me-1"></i> Retry\n </button>\n </div>\n \`;
         elements.chatMessages && elements.chatMessages.appendChild(errorElement);
 
         const retryBtn = errorElement.querySelector('.retry-btn');
@@ -2290,7 +2290,7 @@ function exportChat() {
     const url = URL.createObjectURL(blob);
     const downloadLink = document.createElement('a');
     downloadLink.href = url;
-    downloadLink.download = \`chat_export_${new Date().toISOString().replace(/:/g, '-')}.json\`;
+    downloadLink.download = \`chat_export_\${new Date().toISOString().replace(/:/g, '- ')}.json\`;
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
