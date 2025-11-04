@@ -7,6 +7,93 @@
         createPanel();
     };
 
+    function allowDataMediaAsBlob() {
+        try {
+            const proto = HTMLMediaElement.prototype;
+            const originalDesc = Object.getOwnPropertyDescriptor(proto, 'src') || {};
+            const originalSrcSetter = originalDesc.set;
+            const originalSrcGetter = originalDesc.get;
+            Object.defineProperty(proto, 'src', {
+                configurable: true,
+                enumerable: true,
+                get: function () {
+                    try {
+                        if (originalSrcGetter) return originalSrcGetter.call(this);
+                        return this.getAttribute && this.getAttribute('src');
+                    } catch (e) {
+                        return this.getAttribute && this.getAttribute('src');
+                    }
+                },
+                set: function (val) {
+                    try {
+                        if (typeof val === 'string' && val.startsWith('data:')) {
+                            const comma = val.indexOf(',');
+                            if (comma === -1) {
+                                if (originalSrcSetter) return originalSrcSetter.call(this, val);
+                                return this.setAttribute && this.setAttribute('src', val);
+                            }
+                            const meta = val.substring(5, comma);
+                            const isBase64 = /;base64$/.test(meta);
+                            const b64 = val.substring(comma + 1);
+                            const raw = isBase64 ? atob(b64) : decodeURIComponent(b64);
+                            const u8 = new Uint8Array(raw.length);
+                            for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i);
+                            const mime = meta.split(';')[0] || 'application/octet-stream';
+                            const blob = new Blob([u8], { type: mime });
+                            const blobUrl = URL.createObjectURL(blob);
+                            const el = this;
+                            if (originalSrcSetter) originalSrcSetter.call(el, blobUrl);
+                            else el.setAttribute && el.setAttribute('src', blobUrl);
+                            const revoke = () => {
+                                try { URL.revokeObjectURL(blobUrl); } catch (e) {}
+                            };
+                            el.addEventListener('loadeddata', revoke, { once: true });
+                            el.addEventListener('error', revoke, { once: true });
+                            return;
+                        }
+                    } catch (e) {}
+                    if (originalSrcSetter) return originalSrcSetter.call(this, val);
+                    return this.setAttribute && this.setAttribute('src', val);
+                }
+            });
+
+            const originalSetAttribute = Element.prototype.setAttribute;
+            Element.prototype.setAttribute = function (name, value) {
+                try {
+                    if ((name === 'src' || name === 'poster') && typeof value === 'string' && value.startsWith('data:') && this instanceof HTMLMediaElement) {
+                        this.src = value;
+                        return;
+                    }
+                } catch (e) {}
+                return originalSetAttribute.call(this, name, value);
+            };
+
+            const originalAppendChild = Node.prototype.appendChild;
+            Node.prototype.appendChild = function (node) {
+                try {
+                    if (node instanceof HTMLSourceElement && node.src && typeof node.src === 'string' && node.src.startsWith('data:') && this instanceof HTMLMediaElement) {
+                        this.src = node.src;
+                        return node;
+                    }
+                } catch (e) {}
+                return originalAppendChild.call(this, node);
+            };
+        } catch (e) {}
+    }
+
+    try {
+        const _warn = console.warn;
+        console.warn = function () {
+            try {
+                const txt = Array.from(arguments).join(' ');
+                if (txt && txt.includes('Desmos API key')) return;
+            } catch (e) {}
+            return _warn.apply(console, arguments);
+        };
+    } catch (e) {}
+
+    allowDataMediaAsBlob();
+
     function createPanel() {
         const host = document.createElement('div');
         host.id = 'mp-tools-panel';
@@ -16,20 +103,12 @@
         const s = host.attachShadow({ mode: 'open' });
 
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = `
-            all: initial;
-            box-sizing: border-box;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #e6eef8;
-            width: 100%;
-        `;
+        wrapper.style.cssText = 'all: initial;box-sizing: border-box;font-family: Arial, Helvetica, sans-serif;color: #e6eef8;width: 100%;';
         wrapper.innerHTML = `
             <style>
                 :host, .panel { display: block; }
                 .panel {
                     position: relative;
-                    right: 0;
-                    top: 0;
                     width: 420px;
                     background: #0f1724;
                     color: #e6eef8;
@@ -82,7 +161,6 @@
                 </div>
             </div>
         `;
-
         s.appendChild(wrapper);
 
         const panelEl = s.getElementById('panel');
@@ -212,14 +290,7 @@
         const s = host.attachShadow({ mode: 'open' });
 
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = `
-            all: initial;
-            box-sizing: border-box;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #111;
-            width: 100%;
-            height: 100%;
-        `;
+        wrapper.style.cssText = 'all: initial;box-sizing: border-box;font-family: Arial, Helvetica, sans-serif;color: #111;width: 100%;height: 100%;';
         wrapper.innerHTML = `
             <style>
                 .panel {
@@ -276,7 +347,6 @@
                 </div>
             </div>
         `;
-
         s.appendChild(wrapper);
 
         const panelEl = s.getElementById('panel');
