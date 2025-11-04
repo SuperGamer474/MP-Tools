@@ -2373,11 +2373,8 @@ function placeCursorAtEnd(element) {
 
 </html>
         `;
-
-        // add it to your panel like before
         body.appendChild(contentContainer);
         panel.appendChild(body);
-        document.body.appendChild(panel);
         document.body.appendChild(panel);
         if (typeof draggable === 'function') {
             draggable(panel, header);
