@@ -289,27 +289,373 @@
     }
     function openOpenAI() {
         const content = `
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111}
-          .hero{padding:18px;text-align:center}
-          .btn{display:inline-block;padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:#f3f4f6;cursor:pointer}
-        </style>
-      </head>
-      <body>
-        <div class="hero">
-          <h1>Hello from inside the popup 🎉</h1>
-          <p>Replace this whole block with your markup.</p>
-          <button class="btn" onclick="alert('Button inside popup clicked!')">Click me</button>
-        </div>
-        <script>
-          // inline script WILL run thanks to the host code that re-injects scripts
-          console.log('inline script executed from popup content');
-        </script>
-      </body>
-    </html>
+<style>
+  body {
+    margin: 0;
+    font-family: "Inter", Arial, sans-serif;
+    background: #f2f3f5;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 8px;
+    overflow-y: auto;
+  }
+
+  .message {
+    max-width: 74%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+    white-space: pre-wrap;
+    font-size: 14px;
+  }
+
+  .from-user {
+    align-self: flex-end;
+    background: linear-gradient(180deg,#0b84ff,#0066d6);
+    color: #fff;
+    border-bottom-right-radius: 6px;
+  }
+
+  .from-other {
+    align-self: flex-start;
+    background: #e6e9ee;
+    color: #111;
+    border-bottom-left-radius: 6px;
+  }
+
+  .chat-input {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    border-top: 1px solid #e0e0e0;
+    background: #fff;
+    align-items: flex-end;
+  }
+
+  .chat-input textarea {
+    flex: 1;
+    min-height: 44px;
+    max-height: 160px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    resize: none;
+    font-size: 14px;
+    outline: none;
+    line-height: 1.3;
+  }
+
+  .controls {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    align-items:flex-end;
+    justify-content:space-between;
+  }
+
+  .chat-input button {
+    background: #0078ff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .chat-input button:active { transform: translateY(1px); }
+  .small-btn {
+    background: #f3f4f6;
+    color: #111;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    font-size: 12px;
+  }
+</style>
+
+<div class="chat-container" id="chat">
+  <!-- intentionally empty at start -->
+</div>
+
+<div class="chat-input">
+  <textarea id="msgInput" placeholder="Type a message"></textarea>
+  <div class="controls">
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+      <button id="sendBtn">Send</button>
+      <button id="stopBtn" class="small-btn" style="display:none">Stop</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---------- CONFIG (edit here) ----------
+  const API_KEY = 'csk-nhykr5xjwe495twcvtx383wh3vnyj2n4x9nr26k56mje6jxr'; // put your key here
+  const ENDPOINT = 'https://api.cerebras.ai/v1/chat/completions';
+  const MODEL = 'gpt-oss-120b';
+
+  // Hidden system message (JS-only, not shown in chat)
+  const SYSTEM_MESSAGE = "You are a friendly chatbot called MP Helper. You help with maths problems. MP stands for Math Pathways, as this is the program you are in. NEVER respond with math displaystyles or markdown, ONLY respond with either plaintext. NEVER use displaystyle or math format or markdown. You are a part of MP Tools, a tool system for Math Pathways. For example, INSTEAD of doing this: (1 div 1 = 1), do THIS: 1/1 = 1 NEVER use math formatter. So, NEVER use LaTeX-style display math, instead always write math in plain text.";
+
+  // ---------- in-memory memory (cleared on reload) ----------
+  let messages = []; // {role: 'user'|'assistant', content: '...'}
+  let currentController = null;
+
+  // ---------- DOM ----------
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('msgInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const stopBtn = document.getElementById('stopBtn');
+
+  // helpers
+  function makeBubble(text, cls) {
+    const d = document.createElement('div');
+    d.className = 'message ' + cls;
+    d.textContent = text;
+    return d;
+  }
+  function scrollToBottom() {
+    chat.scrollTop = chat.scrollHeight;
+  }
+  function renderMessages() {
+    chat.innerHTML = '';
+    for (const m of messages) {
+      const cls = m.role === 'user' ? 'from-user' : 'from-other';
+      const bubble = makeBubble(m.content, cls);
+      chat.appendChild(bubble);
+    }
+    scrollToBottom();
+  }
+
+  // Send user message & stream AI response
+  async function sendMessage() {
+    const raw = input.value.replace(/\\u00A0/g, ' ');
+    const text = raw.trim();
+    if (!text) return;
+
+    // append user message
+    const userMsg = { role: 'user', content: text };
+    messages.push(userMsg);
+    chat.appendChild(makeBubble(text, 'from-user'));
+    input.value = '';
+    scrollToBottom();
+
+    // start streaming assistant response
+    await streamAssistantResponse();
+  }
+
+  function abortCurrentStream() {
+    if (currentController) {
+      try { currentController.abort(); } catch(e) {}
+      currentController = null;
+      stopBtn.style.display = 'none';
+    }
+  }
+
+  // Robust streaming parser for Cerebras streaming shape (choices[0].delta.content)
+  async function streamAssistantResponse() {
+    // Build payload messages: hidden system first
+    const payloadMessages = [
+      { role: 'system', content: SYSTEM_MESSAGE },
+      ...messages.map(m => ({ role: m.role, content: m.content }))
+    ];
+
+    // Add placeholder assistant message to memory and UI
+    const assistantPlaceholder = { role: 'assistant', content: '' };
+    messages.push(assistantPlaceholder);
+    const assistantBubble = makeBubble('', 'from-other');
+    chat.appendChild(assistantBubble);
+    scrollToBottom();
+
+    // abort previous
+    abortCurrentStream();
+    const controller = new AbortController();
+    currentController = controller;
+    stopBtn.style.display = 'inline-block';
+
+    try {
+      console.log('Starting fetch to', ENDPOINT);
+      console.log('Payload:', JSON.stringify({
+          model: MODEL,
+          stream: true,
+          max_completion_tokens: 65536,
+          temperature: 1,
+          top_p: 1,
+          reasoning_effort: 'low',
+          messages: payloadMessages
+        }, null, 2));
+
+      const resp = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + API_KEY
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          stream: true,
+          max_completion_tokens: 65536,
+          temperature: 1,
+          top_p: 1,
+          reasoning_effort: 'low',
+          messages: payloadMessages
+        }),
+        signal: controller.signal
+      });
+
+      console.log('Fetch response status:', resp.status, 'OK:', resp.ok);
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        console.error('API error text:', txt);
+        throw new Error('API error: ' + resp.status + ' — ' + txt);
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      // Append incoming token string to assistant bubble
+      function appendToAssistant(str) {
+        assistantPlaceholder.content += str;
+        assistantBubble.textContent = assistantPlaceholder.content;
+        scrollToBottom();
+      }
+
+      let done = false;
+      while (!done) {
+        const { value, done: streamDone } = await reader.read();
+        if (streamDone) {
+          console.log('Stream done');
+          break;
+        }
+        const chunk = decoder.decode(value, { stream: true });
+        console.log('Received chunk:', chunk);
+        buffer += chunk;
+
+        // split into lines (handles both SSE "data: ..." and JSON-lines)
+        const lines = buffer.split(/\r?\n/);
+        // keep last partial
+        buffer = lines.pop() || '';
+
+        for (let rawLine of lines) {
+          rawLine = rawLine.trim();
+          if (!rawLine) continue;
+          console.log('Processing line:', rawLine);
+          // SSE-style: data: ...
+          let payload;
+          if (rawLine.startsWith('data:')) {
+            payload = rawLine.slice(5).trim();
+            console.log('SSE payload:', payload);
+            if (payload === '[DONE]') { 
+              done = true; 
+              console.log('Received [DONE]');
+              break; 
+            }
+          } else {
+            payload = rawLine;
+          }
+
+          // try parse JSON payload
+          try {
+            const parsed = JSON.parse(payload);
+            console.log('Parsed JSON:', parsed);
+            // prefer OpenAI-like streaming delta: choices[].delta.content
+            if (parsed.choices && parsed.choices.length > 0) {
+              for (const ch of parsed.choices) {
+                if (ch.delta && typeof ch.delta.content === 'string') {
+                  console.log('Appending token:', ch.delta.content);
+                  appendToAssistant(ch.delta.content);
+                } else if (ch.text) {
+                  console.log('Appending text:', ch.text);
+                  appendToAssistant(ch.text);
+                } else if (ch.message && ch.message.content) {
+                  // some shapes: message.content.parts[]
+                  if (typeof ch.message.content === 'string') {
+                    console.log('Appending message content:', ch.message.content);
+                    appendToAssistant(ch.message.content);
+                  } else if (ch.message.content.parts && ch.message.content.parts[0]) {
+                    console.log('Appending parts[0]:', ch.message.content.parts[0]);
+                    appendToAssistant(ch.message.content.parts[0]);
+                  }
+                }
+              }
+            } else if (parsed.text) {
+              console.log('Appending parsed.text:', parsed.text);
+              appendToAssistant(parsed.text);
+            }
+          } catch (err) {
+            console.error('JSON parse error:', err, 'on payload:', payload);
+            // not JSON — append raw payload
+            appendToAssistant(payload + '\n');
+          }
+        } // end for lines
+      } // end while
+
+      // mark stream finished
+      currentController = null;
+      stopBtn.style.display = 'none';
+      // finalise memory (assistantPlaceholder already references object in messages)
+      // Optionally you can post-process whitespace here
+      assistantPlaceholder.content = assistantPlaceholder.content.trimEnd();
+      renderMessages();
+    } catch (err) {
+      console.error('Stream error:', err);
+      if (err.name === 'AbortError') {
+        // aborted by user - keep partial content already streamed
+        currentController = null;
+        stopBtn.style.display = 'none';
+        renderMessages();
+      } else {
+        // show error text in assistant bubble (keeps UI silent per your "no extra status" rule)
+        assistantPlaceholder.content += '\n⚠️ Error: ' + (err.message || err);
+        currentController = null;
+        stopBtn.style.display = 'none';
+        renderMessages();
+      }
+    }
+  }
+
+  // ---------- Events ----------
+  sendBtn.addEventListener('click', sendMessage);
+  stopBtn.addEventListener('click', () => abortCurrentStream());
+
+  // Key handling: Shift+Enter = newline; Enter or Ctrl+Enter => send
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // allow newline
+        return;
+      }
+      // Enter alone OR Ctrl+Enter => send
+      e.preventDefault();
+      if (currentController) {
+        // stop active stream first, then send after a brief moment
+        abortCurrentStream();
+        setTimeout(sendMessage, 150);
+      } else {
+        sendMessage();
+      }
+    }
+  });
+
+  // focus input on open
+  input.focus();
+  scrollToBottom();
+})();
+</script>
     `;
 
         const title = 'AI Chat';
