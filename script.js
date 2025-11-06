@@ -1,3 +1,4 @@
+### MP_Tools.js
 (function () {
     window.MP_Tools = function () {
         if (document.getElementById('mp-tools-panel')) {
@@ -517,7 +518,7 @@
         console.log('Received chunk:', chunk);
         buffer += chunk;
         // split into lines (handles both SSE "data: ..." and JSON-lines)
-        const lines = buffer.split(new RegExp('\\r?\\n'));
+        const lines = buffer.split(/\r?\n/);
         // keep last partial
         buffer = lines.pop() || '';
         for (let rawLine of lines) {
@@ -735,9 +736,9 @@
             // clear target
             while (targetElement.firstChild) targetElement.removeChild(targetElement.firstChild);
             // collect children and scripts separately (snapshot)
-            const nodes = Array.from(parsed.body.childNodes);
+            const allNodes = [...parsed.head.childNodes, ...parsed.body.childNodes];
             const scriptNodes = [];
-            for (const n of nodes) {
+            for (const n of allNodes) {
               if (n.nodeName === 'SCRIPT') {
                 scriptNodes.push(n);
               } else {
@@ -773,7 +774,7 @@
                     });
                   } else {
                     // inline script: set text and append (executes immediately)
-                    newScript.text = oldScript.textContent || oldScript.innerHTML || '';
+                    newScript.textContent = oldScript.textContent || oldScript.innerHTML || '';
                     targetElement.appendChild(newScript);
                   }
                 } catch (err) {
