@@ -339,7 +339,7 @@
         textarea.style.cssText = `
             flex:1;min-height:44px;max-height:160px;padding:10px;border-radius:8px;
             border:1px solid #ccc;resize:none;font-size:14px;outline:none;
-            line-height:1.3;font-family:inherit;
+            line-height:1.3;font-family:inherit;margin-bottom:10px;
         `;
         
         const controls = document.createElement('div');
