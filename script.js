@@ -46,17 +46,13 @@
         const c1 = column();
         const c2 = column();
         
-        const startBtn = btn('Start Speedrunner', '#16a34a', '#fff');
-        const stopBtn = btn('Stop Speedrunner', '#ef4444', '#fff');
-        stopBtn.style.marginBottom = '12px';
-        c1.appendChild(startBtn);
-        c1.appendChild(stopBtn);
+        // Speedrunner toggle
+        const speedrunnerToggle = createToggle('Speedrunner', 'speedrunner-toggle');
+        c1.appendChild(speedrunnerToggle);
         
-        const enableBtn = btn('Enable Right Click', '#16a34a', '#fff');
-        const disableBtn = btn('Disable Right Click', '#ef4444', '#fff');
-        disableBtn.style.marginBottom = '12px';
-        c2.appendChild(enableBtn);
-        c2.appendChild(disableBtn);
+        // Right click toggle
+        const rightClickToggle = createToggle('Right Click', 'rightclick-toggle');
+        c2.appendChild(rightClickToggle);
         
         const calcBtn = btn('Calculator', '#0ea5a4', '#fff');
         c1.appendChild(calcBtn);
@@ -69,11 +65,167 @@
         p.appendChild(cols);
         document.body.appendChild(p);
         
-        speedrunner(startBtn, stopBtn);
-        rightClick(enableBtn, disableBtn);
+        // Initialize toggle functionality
+        setupSpeedrunnerToggle(speedrunnerToggle);
+        setupRightClickToggle(rightClickToggle);
         draggable(p, h);
         calcBtn.onclick = () => openCalculator();
         openAiBtn.onclick = () => openOpenAI();
+    }
+    
+    function createToggle(label, id) {
+        const container = document.createElement('div');
+        container.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;';
+        
+        const labelEl = document.createElement('span');
+        labelEl.textContent = label;
+        labelEl.style.cssText = 'font-weight:600;font-size:12px;';
+        
+        const toggleContainer = document.createElement('label');
+        toggleContainer.style.cssText = 'position:relative;display:inline-block;width:44px;height:24px;';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = id;
+        checkbox.style.cssText = 'opacity:0;width:0;height:0;position:absolute;';
+        
+        const slider = document.createElement('span');
+        slider.style.cssText = `
+            position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;
+            background-color:#374151;transition:.3s;border-radius:24px;
+        `;
+        
+        const knob = document.createElement('span');
+        knob.style.cssText = `
+            position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;
+            background-color:#e6eef8;transition:.3s;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);
+        `;
+        
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                slider.style.backgroundColor = '#16a34a';
+                knob.style.transform = 'translateX(20px)';
+            } else {
+                slider.style.backgroundColor = '#374151';
+                knob.style.transform = 'translateX(0)';
+            }
+        });
+        
+        slider.appendChild(knob);
+        toggleContainer.appendChild(checkbox);
+        toggleContainer.appendChild(slider);
+        
+        container.appendChild(labelEl);
+        container.appendChild(toggleContainer);
+        
+        return container;
+    }
+    
+    function setupSpeedrunnerToggle(toggleContainer) {
+        const checkbox = toggleContainer.querySelector('input');
+        
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                startSpeedrunner();
+            } else {
+                stopSpeedrunner();
+            }
+        });
+    }
+    
+    function setupRightClickToggle(toggleContainer) {
+        const checkbox = toggleContainer.querySelector('input');
+        
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                enableRightClick();
+            } else {
+                disableRightClick();
+            }
+        });
+    }
+    
+    function startSpeedrunner() {
+        if (window.__autoClickerRunning) return console.log('Speedrunner already running');
+        window.__autoClickerStopRequested = false;
+        window.__autoClickerRunning = true;
+        const wait = (sel, txt, to = 10000) => new Promise((res, rej) => {
+            const s = Date.now();
+            const iv = setInterval(() => {
+                const els = [...document.querySelectorAll(sel)];
+                for (const el of els) if (el.textContent.trim() === txt) { clearInterval(iv); res(el); return; }
+                if (Date.now() - s > to) { clearInterval(iv); rej(new Error('Timeout: ' + txt)); }
+            }, 200);
+        });
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        
+        (async function run() {
+            try {
+                while (!window.__autoClickerStopRequested) {
+                    try {
+                        (await wait('div.bottom-button.card-button.check-button.flex.items-center.relative.right-button.round-button',
+                                    'Check my answer')).click();
+                        (await wait('div.next-button.ph3.pv2.card-button.round-button.bottom-button.left-button.flex.items-center.mr2',
+                                    'Complete question')).click();
+                        await sleep(3000);
+                    } catch (e) { await sleep(1000); }
+                }
+            } finally {
+                window.__autoClickerRunning = false;
+                console.log('Speedrunner stopped');
+            }
+        })();
+    }
+    
+    function stopSpeedrunner() {
+        window.__autoClickerStopRequested = true;
+        window.__autoClickerRunning = false;
+        console.log('Stop requested');
+    }
+    
+    function enableRightClick() {
+        if (window.__allowRClickInterval) return console.log('Already running');
+        const handler = e => { 
+            try { 
+                // Don't interfere with dragging - allow through events from our panels
+                if (e.target.closest('#mp-tools-panel, #mp-desmos-panel, #mp-aichat-panel')) {
+                    return;
+                }
+                e.stopImmediatePropagation(); 
+            } catch (_) {} 
+        };
+        const purge = () => {
+            document.oncontextmenu = document.onmousedown = document.onmouseup = null;
+            document.querySelectorAll('*').forEach(el => {
+                // Skip our panels to allow dragging
+                if (el.closest('#mp-tools-panel, #mp-desmos-panel, #mp-aichat-panel')) {
+                    return;
+                }
+                el.oncontextmenu = el.onmousedown = el.onmouseup = null;
+            });
+            ['contextmenu','mousedown','mouseup'].forEach(ev => {
+                window.addEventListener(ev, handler, true);
+                document.addEventListener(ev, handler, true);
+            });
+            window.__allowRClick_installed = true;
+            window.__allowRClick_handler = handler;
+        };
+        window.__allowRClickInterval = setInterval(purge, 50);
+        console.log('Right-click unblocker ON');
+    }
+    
+    function disableRightClick() {
+        if (window.__allowRClickInterval) clearInterval(window.__allowRClickInterval);
+        if (window.__allowRClick_installed && window.__allowRClick_handler) {
+            ['contextmenu','mousedown','mouseup'].forEach(ev => {
+                try { window.removeEventListener(ev, window.__allowRClick_handler, true); } catch (_) {}
+                try { document.removeEventListener(ev, window.__allowRClick_handler, true); } catch (_) {}
+            });
+        }
+        window.__allowRClick_installed = false;
+        window.__allowRClick_handler = null;
+        window.__allowRClickInterval = null;
+        console.log('Right-click unblocker OFF');
     }
     
     function column() {
@@ -91,76 +243,6 @@
             font-size:12px;background:${bg};color:${fg};
         `;
         return b;
-    }
-    
-    function speedrunner(start, stop) {
-        start.onclick = async function () {
-            if (window.__autoClickerRunning) return console.log('Speedrunner already running');
-            window.__autoClickerStopRequested = false;
-            window.__autoClickerRunning = true;
-            const wait = (sel, txt, to = 10000) => new Promise((res, rej) => {
-                const s = Date.now();
-                const iv = setInterval(() => {
-                    const els = [...document.querySelectorAll(sel)];
-                    for (const el of els) if (el.textContent.trim() === txt) { clearInterval(iv); res(el); return; }
-                    if (Date.now() - s > to) { clearInterval(iv); rej(new Error('Timeout: ' + txt)); }
-                }, 200);
-            });
-            const sleep = ms => new Promise(r => setTimeout(r, ms));
-            try {
-                while (!window.__autoClickerStopRequested) {
-                    try {
-                        (await wait('div.bottom-button.card-button.check-button.flex.items-center.relative.right-button.round-button',
-                                    'Check my answer')).click();
-                        (await wait('div.next-button.ph3.pv2.card-button.round-button.bottom-button.left-button.flex.items-center.mr2',
-                                    'Complete question')).click();
-                        await sleep(3000);
-                    } catch (e) { await sleep(1000); }
-                }
-            } finally {
-                window.__autoClickerRunning = false;
-                console.log('Speedrunner stopped');
-            }
-        };
-        stop.onclick = () => {
-            window.__autoClickerStopRequested = true;
-            window.__autoClickerRunning = false;
-            console.log('Stop requested');
-        };
-    }
-    
-    function rightClick(enable, disable) {
-        enable.onclick = function () {
-            if (window.__allowRClickInterval) return console.log('Already running');
-            const handler = e => { try { e.stopImmediatePropagation(); } catch (_) {} };
-            const purge = () => {
-                document.oncontextmenu = document.onmousedown = document.onmouseup = null;
-                document.querySelectorAll('*').forEach(el => {
-                    el.oncontextmenu = el.onmousedown = el.onmouseup = null;
-                });
-                ['contextmenu','mousedown','mouseup'].forEach(ev => {
-                    window.addEventListener(ev, handler, true);
-                    document.addEventListener(ev, handler, true);
-                });
-                window.__allowRClick_installed = true;
-                window.__allowRClick_handler = handler;
-            };
-            window.__allowRClickInterval = setInterval(purge, 50);
-            console.log('Right-click unblocker ON');
-        };
-        disable.onclick = function () {
-            if (window.__allowRClickInterval) clearInterval(window.__allowRClickInterval);
-            if (window.__allowRClick_installed && window.__allowRClick_handler) {
-                ['contextmenu','mousedown','mouseup'].forEach(ev => {
-                    try { window.removeEventListener(ev, window.__allowRClick_handler, true); } catch (_) {}
-                    try { document.removeEventListener(ev, window.__allowRClick_handler, true); } catch (_) {}
-                });
-            }
-            window.__allowRClick_installed = false;
-            window.__allowRClick_handler = null;
-            window.__allowRClickInterval = null;
-            console.log('Right-click unblocker OFF');
-        };
     }
     
     function openCalculator() {
@@ -476,7 +558,7 @@
                         max_completion_tokens: 65536,
                         temperature: 1,
                         top_p: 1,
-                        reasoning_effort: 'low',
+                        // REMOVED reasoning_effort parameter to disable reasoning
                         messages: payloadMessages
                     }),
                     signal: controller.signal
