@@ -435,17 +435,7 @@
             padding:10px 14px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:10px;
         `;
         
-        const stopBtn = document.createElement('button');
-        stopBtn.id = 'mp-stop-btn';
-        stopBtn.textContent = 'Stop';
-        stopBtn.style.cssText = `
-            background:#f3f4f6;color:#111;padding:6px 8px;border-radius:6px;
-            border:1px solid #ddd;cursor:pointer;font-size:12px;font-family:inherit;margin-bottom:10px;
-            display:none;
-        `;
-        
         controls.appendChild(sendBtn);
-        controls.appendChild(stopBtn);
         inputArea.appendChild(textarea);
         inputArea.appendChild(controls);
         chatContainer.appendChild(messagesArea);
@@ -454,7 +444,7 @@
         document.body.appendChild(panel);
         
         // Add the chat functionality directly
-        setupChat(messagesArea, textarea, sendBtn, stopBtn);
+        setupChat(messagesArea, textarea, sendBtn);
         
         draggable(panel, header);
         
@@ -470,7 +460,7 @@
         textarea.focus();
     }
     
-    function setupChat(messagesArea, input, sendBtn, stopBtn) {
+    function setupChat(messagesArea, input, sendBtn) {
         const API_KEY = 'csk-nhykr5xjwe495twcvtx383wh3vnyj2n4x9nr26k56mje6jxr';
         const ENDPOINT = 'https://api.cerebras.ai/v1/chat/completions';
         const MODEL = 'gpt-oss-120b';
@@ -520,14 +510,6 @@
             await streamAssistantResponse();
         }
         
-        function abortCurrentStream() {
-            if (currentController) {
-                currentController.abort();
-                currentController = null;
-                stopBtn.style.display = 'none';
-            }
-        }
-        
         async function streamAssistantResponse() {
             const payloadMessages = [
                 { role: 'system', content: SYSTEM_MESSAGE },
@@ -540,10 +522,11 @@
             messagesArea.appendChild(assistantBubble);
             scrollToBottom();
             
-            abortCurrentStream();
+            if (currentController) {
+                currentController.abort();
+            }
             const controller = new AbortController();
             currentController = controller;
-            stopBtn.style.display = 'inline-block';
             
             try {
                 const response = await fetch(ENDPOINT, {
@@ -558,7 +541,6 @@
                         max_completion_tokens: 65536,
                         temperature: 1,
                         top_p: 1,
-                        // REMOVED reasoning_effort parameter to disable reasoning
                         messages: payloadMessages
                     }),
                     signal: controller.signal
@@ -600,19 +582,16 @@
                 }
                 
                 currentController = null;
-                stopBtn.style.display = 'none';
                 assistantMsg.content = assistantMsg.content.trim();
                 renderMessages();
                 
             } catch (err) {
                 if (err.name === 'AbortError') {
                     currentController = null;
-                    stopBtn.style.display = 'none';
                     renderMessages();
                 } else {
                     assistantMsg.content += '\n⚠️ Error: ' + err.message;
                     currentController = null;
-                    stopBtn.style.display = 'none';
                     renderMessages();
                 }
             }
@@ -620,17 +599,11 @@
         
         // Event listeners
         sendBtn.onclick = sendMessage;
-        stopBtn.onclick = abortCurrentStream;
         
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (currentController) {
-                    abortCurrentStream();
-                    setTimeout(sendMessage, 150);
-                } else {
-                    sendMessage();
-                }
+                sendMessage();
             }
         });
     }
