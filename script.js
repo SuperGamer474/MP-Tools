@@ -50,13 +50,17 @@
         const speedrunnerToggle = createToggle('Speedrunner', 'speedrunner-toggle');
         c1.appendChild(speedrunnerToggle);
         
-        // Anti-Blur toggle (NEW)
+        // Anti-Blur toggle
         const antiBlurToggle = createToggle('Anti-Blur', 'antiblur-toggle');
         c1.appendChild(antiBlurToggle);
         
         // Right click toggle
         const rightClickToggle = createToggle('Right Click', 'rightclick-toggle');
         c2.appendChild(rightClickToggle);
+        
+        // Anti-lockout toggle (new) — placed in column 2
+        const antiLockoutToggle = createToggle('Anti-lockout', 'antilockout-toggle');
+        c2.appendChild(antiLockoutToggle);
         
         const calcBtn = btn('Calculator', '#0ea5a4', '#fff');
         c1.appendChild(calcBtn);
@@ -71,8 +75,9 @@
         
         // Initialize toggle functionality
         setupSpeedrunnerToggle(speedrunnerToggle);
-        setupAntiBlurToggle(antiBlurToggle); // initialize anti-blur
+        setupAntiBlurToggle(antiBlurToggle);
         setupRightClickToggle(rightClickToggle);
+        setupAntiLockoutToggle(antiLockoutToggle); // initialize anti-lockout
         draggable(p, h);
         calcBtn.onclick = () => openCalculator();
         openAiBtn.onclick = () => openOpenAI();
@@ -232,6 +237,83 @@
             }
         } catch (_) {}
         console.log('Anti-Blur OFF');
+    }
+    
+    // Anti-lockout functionality (removes overlay containers)
+    function setupAntiLockoutToggle(toggleContainer) {
+        const checkbox = toggleContainer.querySelector('input');
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                enableAntiLockout();
+            } else {
+                disableAntiLockout();
+            }
+        });
+    }
+    
+    function enableAntiLockout() {
+        if (window.__antiLockoutEnabled) return console.log('Anti-lockout already enabled');
+        window.__antiLockoutEnabled = true;
+        
+        // Initial sweep
+        try {
+            document.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove());
+        } catch (e) {}
+        
+        // Observe for newly added overlay containers
+        const observer = new MutationObserver(mutations => {
+            for (const m of mutations) {
+                if (m.type === 'childList') {
+                    m.addedNodes.forEach(node => {
+                        if (!node || node.nodeType !== 1) return;
+                        try {
+                            if (node.matches && node.matches('.cdk-overlay-container')) {
+                                node.remove();
+                                return;
+                            }
+                        } catch (_) {}
+                        try {
+                            node.querySelectorAll && node.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove());
+                        } catch (_) {}
+                    });
+                }
+            }
+        });
+        
+        try {
+            observer.observe(document.body, { subtree: true, childList: true });
+            window.__antiLockoutObserver = observer;
+        } catch (e) {
+            console.error('Anti-lockout observer failed to start', e);
+            window.__antiLockoutObserver = null;
+        }
+        
+        // Backup interval in case something bypasses the observer
+        window.__antiLockoutInterval = setInterval(() => {
+            try {
+                document.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove());
+            } catch (_) {}
+        }, 250);
+        
+        console.log('Anti-lockout ON — overlays will be removed instantly');
+    }
+    
+    function disableAntiLockout() {
+        if (!window.__antiLockoutEnabled) return console.log('Anti-lockout already disabled');
+        window.__antiLockoutEnabled = false;
+        try {
+            if (window.__antiLockoutObserver) {
+                window.__antiLockoutObserver.disconnect();
+                window.__antiLockoutObserver = null;
+            }
+        } catch (_) {}
+        try {
+            if (window.__antiLockoutInterval) {
+                clearInterval(window.__antiLockoutInterval);
+                window.__antiLockoutInterval = null;
+            }
+        } catch (_) {}
+        console.log('Anti-lockout OFF');
     }
     
     function startSpeedrunner() {
