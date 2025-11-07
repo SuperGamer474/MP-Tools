@@ -50,6 +50,10 @@
         const speedrunnerToggle = createToggle('Speedrunner', 'speedrunner-toggle');
         c1.appendChild(speedrunnerToggle);
         
+        // Anti-Blur toggle (NEW)
+        const antiBlurToggle = createToggle('Anti-Blur', 'antiblur-toggle');
+        c1.appendChild(antiBlurToggle);
+        
         // Right click toggle
         const rightClickToggle = createToggle('Right Click', 'rightclick-toggle');
         c2.appendChild(rightClickToggle);
@@ -67,6 +71,7 @@
         
         // Initialize toggle functionality
         setupSpeedrunnerToggle(speedrunnerToggle);
+        setupAntiBlurToggle(antiBlurToggle); // initialize anti-blur
         setupRightClickToggle(rightClickToggle);
         draggable(p, h);
         calcBtn.onclick = () => openCalculator();
@@ -143,6 +148,90 @@
                 disableRightClick();
             }
         });
+    }
+    
+    // Anti-Blur functionality
+    function setupAntiBlurToggle(toggleContainer) {
+        const checkbox = toggleContainer.querySelector('input');
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                enableAntiBlur();
+            } else {
+                disableAntiBlur();
+            }
+        });
+    }
+    
+    function enableAntiBlur() {
+        if (window.__antiBlurEnabled) return console.log('Anti-Blur already enabled');
+        window.__antiBlurEnabled = true;
+        
+        // Remove existing classes immediately
+        try {
+            document.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur'));
+        } catch (e) {}
+        
+        // MutationObserver to remove class when added
+        const observer = new MutationObserver(mutations => {
+            for (const m of mutations) {
+                if (m.type === 'attributes' && m.attributeName === 'class') {
+                    try {
+                        const t = m.target;
+                        if (t && t.classList && t.classList.contains('question-blur')) {
+                            t.classList.remove('question-blur');
+                        }
+                    } catch (_) {}
+                }
+                if (m.type === 'childList') {
+                    m.addedNodes.forEach(node => {
+                        if (!node || node.nodeType !== 1) return;
+                        try {
+                            if (node.classList && node.classList.contains('question-blur')) {
+                                node.classList.remove('question-blur');
+                            }
+                        } catch (_) {}
+                        try {
+                            node.querySelectorAll && node.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur'));
+                        } catch (_) {}
+                    });
+                }
+            }
+        });
+        
+        try {
+            observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+            window.__antiBlurObserver = observer;
+        } catch (e) {
+            console.error('Anti-Blur observer failed to start', e);
+            window.__antiBlurObserver = null;
+        }
+        
+        // Backup interval in case something dodgy bypasses MutationObserver
+        window.__antiBlurInterval = setInterval(() => {
+            try {
+                document.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur'));
+            } catch (_) {}
+        }, 400);
+        
+        console.log('Anti-Blur ON — question-blur class will be removed instantly');
+    }
+    
+    function disableAntiBlur() {
+        if (!window.__antiBlurEnabled) return console.log('Anti-Blur already disabled');
+        window.__antiBlurEnabled = false;
+        try {
+            if (window.__antiBlurObserver) {
+                window.__antiBlurObserver.disconnect();
+                window.__antiBlurObserver = null;
+            }
+        } catch (_) {}
+        try {
+            if (window.__antiBlurInterval) {
+                clearInterval(window.__antiBlurInterval);
+                window.__antiBlurInterval = null;
+            }
+        } catch (_) {}
+        console.log('Anti-Blur OFF');
     }
     
     function startSpeedrunner() {
