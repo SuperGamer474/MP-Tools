@@ -8,7 +8,7 @@
     };
     
     function createPanel() {
-        const p = document.createElement('div');
+        const p = document.createElement('div');F
         p.id = 'mp-tools-panel';
         p.style.cssText = `
             position:fixed;right:12px;top:12px;width:420px;z-index:2147483647;
@@ -49,7 +49,7 @@
         // Speedrunner toggle
         const speedrunnerToggle = createToggle('Speedrunner', 'speedrunner-toggle');
         c1.appendChild(speedrunnerToggle);
-        speedrunnerToggle.style.marginBottom = "60px";
+        speedrunnerToggle.style.marginBottom = "57px";
         
         // Right click toggle
         const rightClickToggle = createToggle('Right Click', 'rightclick-toggle');
