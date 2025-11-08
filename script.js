@@ -90,7 +90,7 @@
         speedrunnerToggle.style.marginBottom = "56px";
 
         // Right click / Selecting toggle
-        const rightClickToggle = createToggle('Enable Right Click / Selecting', 'rightclick-toggle', !!window.__mpToolsState.rightClick);
+        const rightClickToggle = createToggle('Right Click / Selecting', 'rightclick-toggle', !!window.__mpToolsState.rightClick);
         c2.appendChild(rightClickToggle);
 
         // Remove Annoying toggle (combines Anti-Blur + Anti-lockout + red border handling)
