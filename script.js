@@ -262,6 +262,7 @@
         
         // Enable text selection by removing common blocking styles and events
         window.__textSelectHandler = e => {
+            if (e.type === 'click' || e.type === 'mousedown') return;
             e.stopPropagation();
             e.stopImmediatePropagation();
             return false;
@@ -289,7 +290,7 @@
         });
         
         // Add event listeners to prevent selection blocking
-        const events = ['selectstart', 'mousedown', 'dragstart', 'click'];
+        const events = ['selectstart', 'dragstart'];
         events.forEach(eventType => {
             document.addEventListener(eventType, window.__textSelectHandler, true);
         });
@@ -320,7 +321,7 @@
         
         // Remove text selection handlers
         if (window.__textSelectHandler) {
-            const events = ['selectstart', 'mousedown', 'dragstart', 'click'];
+            const events = ['selectstart', 'dragstart'];
             events.forEach(eventType => {
                 document.removeEventListener(eventType, window.__textSelectHandler, true);
             });
