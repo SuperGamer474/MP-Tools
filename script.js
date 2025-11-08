@@ -89,8 +89,8 @@
         c1.appendChild(speedrunnerToggle);
         speedrunnerToggle.style.marginBottom = "56px";
 
-        // Right click toggle
-        const rightClickToggle = createToggle('Right Click', 'rightclick-toggle', !!window.__mpToolsState.rightClick);
+        // Right click / Selecting toggle
+        const rightClickToggle = createToggle('Enable Right Click / Selecting', 'rightclick-toggle', !!window.__mpToolsState.rightClick);
         c2.appendChild(rightClickToggle);
 
         // Remove Annoying toggle (combines Anti-Blur + Anti-lockout + red border handling)
@@ -213,7 +213,7 @@
             window.__mpToolsState = window.__mpToolsState || {};
             window.__mpToolsState.rightClick = true;
             saveState();
-            enableRightClick();
+            enableRightClickAndSelect();
         }
 
         checkbox.addEventListener('change', function () {
@@ -221,9 +221,9 @@
             window.__mpToolsState.rightClick = this.checked;
             saveState();
             if (this.checked) {
-                enableRightClick();
+                enableRightClickAndSelect();
             } else {
-                disableRightClick();
+                disableRightClickAndSelect();
             }
         });
     }
@@ -251,22 +251,89 @@
     }
 
     /* -------------------------
-       Simplified Right Click Functions
+       Enhanced Right Click & Text Selection Functions
        ------------------------- */
-    function enableRightClick() {
-        if (window.__rightClickHandler) return console.log('Right click already enabled');
+    function enableRightClickAndSelect() {
+        if (window.__rightClickHandler) return console.log('Right click and text selection already enabled');
         
+        // Enable right click
         window.__rightClickHandler = e => e.stopPropagation();
         document.addEventListener('contextmenu', window.__rightClickHandler, true);
-        console.log('Right-click enabled');
+        
+        // Enable text selection by removing common blocking styles and events
+        window.__textSelectHandler = e => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            return false;
+        };
+        
+        // Remove common selection-blocking styles
+        const stylesToRemove = [
+            'user-select: none',
+            '-webkit-user-select: none',
+            '-moz-user-select: none',
+            '-ms-user-select: none'
+        ];
+        
+        // Remove inline styles that block selection
+        document.querySelectorAll('*').forEach(element => {
+            if (element.style.userSelect === 'none' || 
+                element.style.webkitUserSelect === 'none' ||
+                element.style.MozUserSelect === 'none' ||
+                element.style.msUserSelect === 'none') {
+                element.style.userSelect = 'auto';
+                element.style.webkitUserSelect = 'auto';
+                element.style.MozUserSelect = 'auto';
+                element.style.msUserSelect = 'auto';
+            }
+        });
+        
+        // Add event listeners to prevent selection blocking
+        const events = ['selectstart', 'mousedown', 'dragstart', 'click'];
+        events.forEach(eventType => {
+            document.addEventListener(eventType, window.__textSelectHandler, true);
+        });
+        
+        // Add CSS to override any styles that block selection
+        if (!window.__selectionStyle) {
+            window.__selectionStyle = document.createElement('style');
+            window.__selectionStyle.textContent = `
+                * {
+                    user-select: auto !important;
+                    -webkit-user-select: auto !important;
+                    -moz-user-select: auto !important;
+                    -ms-user-select: auto !important;
+                }
+            `;
+            document.head.appendChild(window.__selectionStyle);
+        }
+        
+        console.log('Right-click and text selection enabled');
     }
 
-    function disableRightClick() {
-        if (!window.__rightClickHandler) return console.log('Right click already disabled');
+    function disableRightClickAndSelect() {
+        if (!window.__rightClickHandler) return console.log('Right click and text selection already disabled');
         
+        // Remove right click handler
         document.removeEventListener('contextmenu', window.__rightClickHandler, true);
         window.__rightClickHandler = null;
-        console.log('Right-click disabled');
+        
+        // Remove text selection handlers
+        if (window.__textSelectHandler) {
+            const events = ['selectstart', 'mousedown', 'dragstart', 'click'];
+            events.forEach(eventType => {
+                document.removeEventListener(eventType, window.__textSelectHandler, true);
+            });
+            window.__textSelectHandler = null;
+        }
+        
+        // Remove the CSS override
+        if (window.__selectionStyle) {
+            window.__selectionStyle.remove();
+            window.__selectionStyle = null;
+        }
+        
+        console.log('Right-click and text selection disabled');
     }
 
     /* -------------------------
