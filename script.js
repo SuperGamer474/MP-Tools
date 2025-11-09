@@ -117,16 +117,16 @@
     }
 
     /* -------------------------
-       Feature Implementations
+       ORIGINAL Feature Implementations (Restored)
        ------------------------- */
     function enableRightClickAndSelect() {
-        if (window.__rightClickHandler) return;
+        if (window.__rightClickHandler) return console.log('Right click and text selection already enabled');
         
         // Enable right click
         window.__rightClickHandler = e => e.stopPropagation();
         document.addEventListener('contextmenu', window.__rightClickHandler, true);
         
-        // Enable text selection
+        // Enable text selection by removing common blocking styles and events
         window.__textSelectHandler = e => {
             if (e.type === 'click' || e.type === 'mousedown') return;
             e.stopPropagation();
@@ -134,7 +134,15 @@
             return false;
         };
         
-        // Remove selection-blocking styles
+        // Remove common selection-blocking styles
+        const stylesToRemove = [
+            'user-select: none',
+            '-webkit-user-select: none',
+            '-moz-user-select: none',
+            '-ms-user-select: none'
+        ];
+        
+        // Remove inline styles that block selection
         document.querySelectorAll('*').forEach(element => {
             if (element.style.userSelect === 'none' || 
                 element.style.webkitUserSelect === 'none' ||
@@ -166,10 +174,12 @@
             `;
             document.head.appendChild(window.__selectionStyle);
         }
+        
+        console.log('Right-click and text selection enabled');
     }
 
     function disableRightClickAndSelect() {
-        if (!window.__rightClickHandler) return;
+        if (!window.__rightClickHandler) return console.log('Right click and text selection already disabled');
         
         // Remove right click handler
         document.removeEventListener('contextmenu', window.__rightClickHandler, true);
@@ -189,10 +199,12 @@
             window.__selectionStyle.remove();
             window.__selectionStyle = null;
         }
+        
+        console.log('Right-click and text selection disabled');
     }
 
     function enableremoveAnnoying() {
-        if (window.__removeAnnoyingEnabled) return;
+        if (window.__removeAnnoyingEnabled) return console.log('Remove Annoying already enabled');
         window.__removeAnnoyingEnabled = true;
 
         // Initial sweep
@@ -249,19 +261,22 @@
             observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
             window.__removeAnnoyingObserver = observer;
         } catch (e) {
+            console.error('Remove Annoying observer failed to start', e);
             window.__removeAnnoyingObserver = null;
         }
 
-        // Backup interval
+        // Backup interval in case something bypasses the observer
         window.__removeAnnoyingInterval = setInterval(() => {
             try { document.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur')); } catch(_) {}
             try { document.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove()); } catch(_) {}
             try { document.querySelectorAll('div.red-stuff').forEach(el => el.classList.remove('red-stuff')); } catch(_) {}
         }, 300);
+
+        console.log('Remove Annoying ON — stripping question-blur, removing overlays, and removing red-stuff class from divs');
     }
 
     function disableremoveAnnoying() {
-        if (!window.__removeAnnoyingEnabled) return;
+        if (!window.__removeAnnoyingEnabled) return console.log('Remove Annoying already disabled');
         window.__removeAnnoyingEnabled = false;
         try {
             if (window.__removeAnnoyingObserver) {
@@ -275,10 +290,11 @@
                 window.__removeAnnoyingInterval = null;
             }
         } catch (_) {}
+        console.log('Remove Annoying OFF');
     }
 
     function startSpeedrunner() {
-        if (window.__autoClickerRunning) return;
+        if (window.__autoClickerRunning) return console.log('Speedrunner already running');
         window.__autoClickerStopRequested = false;
         window.__autoClickerRunning = true;
         const wait = (sel, txt, to = 10000) => new Promise((res, rej) => {
@@ -304,6 +320,7 @@
                 }
             } finally {
                 window.__autoClickerRunning = false;
+                console.log('Speedrunner stopped');
             }
         })();
     }
@@ -311,6 +328,7 @@
     function stopSpeedrunner() {
         window.__autoClickerStopRequested = true;
         window.__autoClickerRunning = false;
+        console.log('Stop requested');
     }
 
     /* -------------------------
