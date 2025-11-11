@@ -42,11 +42,8 @@
        Status Display Functions
        ------------------------- */
     function showStatus(message, color) {
-        // Remove existing status if any
         const existingStatus = document.getElementById('mp-tools-status');
-        if (existingStatus) {
-            existingStatus.remove();
-        }
+        if (existingStatus) existingStatus.remove();
 
         const status = document.createElement('div');
         status.id = 'mp-tools-status';
@@ -69,11 +66,8 @@
         status.textContent = message;
         document.body.appendChild(status);
 
-        // Auto remove after 2 seconds
         setTimeout(() => {
-            if (status.parentNode) {
-                status.remove();
-            }
+            if (status.parentNode) status.remove();
         }, 2000);
     }
 
@@ -84,13 +78,10 @@
     /* -------------------------
        Feature Toggle Functions
        ------------------------- */
-    // shared debounce for toggles (prevents rapid double-toggle firing)
     window.__mpToolsLastToggle = window.__mpToolsLastToggle || 0;
     function shouldDebounceToggle(ms = 300) {
         const now = Date.now();
-        if (now - window.__mpToolsLastToggle < ms) {
-            return true;
-        }
+        if (now - window.__mpToolsLastToggle < ms) return true;
         window.__mpToolsLastToggle = now;
         return false;
     }
@@ -99,13 +90,12 @@
         if (shouldDebounceToggle()) return console.log('toggleSpeedrunner: debounced');
         window.__mpToolsState.speedrunner = !window.__mpToolsState.speedrunner;
         saveState();
-        
         if (window.__mpToolsState.speedrunner) {
             startSpeedrunner();
-            showStatus('Speedrunner - ON', '#10b981'); // green
+            showStatus('Speedrunner - ON', '#10b981');
         } else {
             stopSpeedrunner();
-            showStatus('Speedrunner - OFF', '#ef4444'); // red
+            showStatus('Speedrunner - OFF', '#ef4444');
         }
     }
 
@@ -113,13 +103,12 @@
         if (shouldDebounceToggle()) return console.log('toggleRemoveAnnoying: debounced');
         window.__mpToolsState.removeAnnoying = !window.__mpToolsState.removeAnnoying;
         saveState();
-        
         if (window.__mpToolsState.removeAnnoying) {
             enableremoveAnnoying();
-            showStatus('Remove Annoying - ON', '#10b981'); // green
+            showStatus('Remove Annoying - ON', '#10b981');
         } else {
             disableremoveAnnoying();
-            showStatus('Remove Annoying - OFF', '#ef4444'); // red
+            showStatus('Remove Annoying - OFF', '#ef4444');
         }
     }
 
@@ -127,13 +116,12 @@
         if (shouldDebounceToggle()) return console.log('toggleRightClick: debounced');
         window.__mpToolsState.rightClick = !window.__mpToolsState.rightClick;
         saveState();
-        
         if (window.__mpToolsState.rightClick) {
             enableRightClickAndSelect();
-            showStatus('Right Click - ON', '#10b981'); // green
+            showStatus('Right Click - ON', '#10b981');
         } else {
             disableRightClickAndSelect();
-            showStatus('Right Click - OFF', '#ef4444'); // red
+            showStatus('Right Click - OFF', '#ef4444');
         }
     }
 
@@ -142,24 +130,21 @@
        ------------------------- */
     function enableRightClickAndSelect() {
         if (window.__rightClickHandler) return console.log('Right click and text selection already enabled');
-        
-        // Enable right click
+
         window.__rightClickHandler = e => e.stopPropagation();
         document.addEventListener('contextmenu', window.__rightClickHandler, true);
-        
-        // Enable text selection by removing common blocking styles and events
+
         window.__textSelectHandler = e => {
             if (e.type === 'click' || e.type === 'mousedown') return;
             e.stopPropagation();
             e.stopImmediatePropagation();
             return false;
         };
-        
-        // Remove common selection-blocking styles (inline)
+
         document.querySelectorAll('*').forEach(element => {
             try {
                 if (element.style) {
-                    if (element.style.userSelect === 'none' || 
+                    if (element.style.userSelect === 'none' ||
                         element.style.webkitUserSelect === 'none' ||
                         element.style.MozUserSelect === 'none' ||
                         element.style.msUserSelect === 'none') {
@@ -171,14 +156,12 @@
                 }
             } catch (_) {}
         });
-        
-        // Add event listeners to prevent selection blocking
+
         const events = ['selectstart', 'dragstart'];
         events.forEach(eventType => {
             document.addEventListener(eventType, window.__textSelectHandler, true);
         });
-        
-        // Add CSS to override any styles that block selection
+
         if (!window.__selectionStyle) {
             window.__selectionStyle = document.createElement('style');
             window.__selectionStyle.textContent = `
@@ -191,18 +174,16 @@
             `;
             document.head.appendChild(window.__selectionStyle);
         }
-        
+
         console.log('Right-click and text selection enabled');
     }
 
     function disableRightClickAndSelect() {
         if (!window.__rightClickHandler) return console.log('Right click and text selection already disabled');
-        
-        // Remove right click handler
+
         document.removeEventListener('contextmenu', window.__rightClickHandler, true);
         window.__rightClickHandler = null;
-        
-        // Remove text selection handlers
+
         if (window.__textSelectHandler) {
             const events = ['selectstart', 'dragstart'];
             events.forEach(eventType => {
@@ -210,13 +191,12 @@
             });
             window.__textSelectHandler = null;
         }
-        
-        // Remove the CSS override
+
         if (window.__selectionStyle) {
             try { window.__selectionStyle.remove(); } catch (_) {}
             window.__selectionStyle = null;
         }
-        
+
         console.log('Right-click and text selection disabled');
     }
 
@@ -224,20 +204,12 @@
         if (window.__removeAnnoyingEnabled) return console.log('Remove Annoying already enabled');
         window.__removeAnnoyingEnabled = true;
 
-        // Initial sweep
-        try {
-            document.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur'));
-        } catch (e) {}
-        try {
-            document.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove());
-        } catch (e) {}
-        try {
-            document.querySelectorAll('div.red-stuff').forEach(el => el.classList.remove('red-stuff'));
-        } catch (e) {}
+        try { document.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur')); } catch(e){}
+        try { document.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove()); } catch(e){}
+        try { document.querySelectorAll('div.red-stuff').forEach(el => el.classList.remove('red-stuff')); } catch(e){}
 
         const observer = new MutationObserver(mutations => {
             for (const m of mutations) {
-                // attribute changes: strip classes immediately
                 if (m.type === 'attributes' && m.attributeName === 'class') {
                     try {
                         const t = m.target;
@@ -247,28 +219,17 @@
                         }
                     } catch (_) {}
                 }
-
-                // childList: handle added nodes
                 if (m.type === 'childList') {
                     m.addedNodes.forEach(node => {
                         if (!node || node.nodeType !== 1) return;
                         try {
-                            if (node.matches && node.matches('.cdk-overlay-container')) {
-                                node.remove();
-                                return;
-                            }
+                            if (node.matches && node.matches('.cdk-overlay-container')) { node.remove(); return; }
                         } catch (_) {}
-                        try {
-                            if (node.classList && node.classList.contains('question-blur')) node.classList.remove('question-blur');
-                            node.querySelectorAll && node.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur'));
-                        } catch (_) {}
-                        try {
-                            if (node.tagName === 'DIV' && node.classList && node.classList.contains('red-stuff')) node.classList.remove('red-stuff');
-                            node.querySelectorAll && node.querySelectorAll('div.red-stuff').forEach(el => el.classList.remove('red-stuff'));
-                        } catch (_) {}
-                        try {
-                            node.querySelectorAll && node.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove());
-                        } catch (_) {}
+                        try { if (node.classList && node.classList.contains('question-blur')) node.classList.remove('question-blur'); } catch(_) {}
+                        try { node.querySelectorAll && node.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur')); } catch(_) {}
+                        try { if (node.tagName === 'DIV' && node.classList && node.classList.contains('red-stuff')) node.classList.remove('red-stuff'); } catch(_) {}
+                        try { node.querySelectorAll && node.querySelectorAll('div.red-stuff').forEach(el => el.classList.remove('red-stuff')); } catch(_) {}
+                        try { node.querySelectorAll && node.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove()); } catch(_) {}
                     });
                 }
             }
@@ -282,7 +243,6 @@
             window.__removeAnnoyingObserver = null;
         }
 
-        // Backup interval in case something bypasses the observer
         window.__removeAnnoyingInterval = setInterval(() => {
             try { document.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur')); } catch(_) {}
             try { document.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove()); } catch(_) {}
@@ -295,18 +255,8 @@
     function disableremoveAnnoying() {
         if (!window.__removeAnnoyingEnabled) return console.log('Remove Annoying already disabled');
         window.__removeAnnoyingEnabled = false;
-        try {
-            if (window.__removeAnnoyingObserver) {
-                window.__removeAnnoyingObserver.disconnect();
-                window.__removeAnnoyingObserver = null;
-            }
-        } catch (_) {}
-        try {
-            if (window.__removeAnnoyingInterval) {
-                clearInterval(window.__removeAnnoyingInterval);
-                window.__removeAnnoyingInterval = null;
-            }
-        } catch (_) {}
+        try { if (window.__removeAnnoyingObserver) { window.__removeAnnoyingObserver.disconnect(); window.__removeAnnoyingObserver = null; } } catch(_) {}
+        try { if (window.__removeAnnoyingInterval) { clearInterval(window.__removeAnnoyingInterval); window.__removeAnnoyingInterval = null; } } catch(_) {}
         console.log('Remove Annoying OFF');
     }
 
@@ -349,9 +299,10 @@
     }
 
     /* -------------------------
-       Calculator feature (from original) — only this feature added
+       Calculator feature
        - No close button in header
-       - Toggle via Alt+4 (keyboard) or programmatically via toggleCalculator()
+       - Toggle via Alt+4
+       - CSS sized to avoid clipping / extra bottom space
        ------------------------- */
 
     function ensureDesmos() {
@@ -388,7 +339,6 @@
     function openCalculator() {
         const existingPanel = document.getElementById('mp-desmos-panel');
         if (existingPanel) {
-            // already open — bring forward
             existingPanel.style.display = '';
             existingPanel.style.zIndex = 2147483648;
             return;
@@ -397,7 +347,7 @@
         const panel = document.createElement('div');
         panel.id = 'mp-desmos-panel';
         panel.style.cssText = `
-            position:fixed;left:12px;top:12px;width:320px;height:440px; /* slightly taller */
+            position:fixed;left:12px;top:12px;width:320px;height:440px;
             z-index:2147483648;
             background:#fff;color:#111;border-radius:8px;border:1px solid #bbb;
             box-shadow:0 8px 30px rgba(0,0,0,.4);font-family:Arial,Helvetica,sans-serif;
@@ -410,14 +360,13 @@
             background:#2b2f33;color:#fff;padding:8px 10px;cursor:grab;
             font-weight:700;font-size:13px;
         `;
-        // NO close button here (per request)
         header.innerHTML = `<span style="pointer-events:none;">Calculator</span>`;
         panel.appendChild(header);
 
         const body = document.createElement('div');
         body.id = 'mp-desmos-body';
         body.style.cssText = `
-            width:100%;height:calc(100% - 36px); /* header is 36px high */
+            width:100%;height:calc(100% - 36px);
             margin:0;padding:0;box-sizing:border-box;background:transparent;
         `;
 
@@ -430,7 +379,6 @@
         panel.appendChild(body);
         document.body.appendChild(panel);
 
-        // simple drag implementation (keeps file self-contained)
         (function simpleDrag() {
             let dragging = false, ox = 0, oy = 0;
             const move = e => {
@@ -472,7 +420,6 @@
             });
         })();
 
-        // ensure Desmos loads and initializes
         ensureDesmos().then(initDesmos).catch(err => {
             console.error('Failed to load Desmos calculator:', err);
             const errNotice = document.createElement('div');
@@ -482,9 +429,7 @@
             bodyEl && bodyEl.appendChild(errNotice);
         });
 
-        panel.addEventListener('mousedown', () => {
-            panel.style.zIndex = 2147483648;
-        });
+        panel.addEventListener('mousedown', () => { panel.style.zIndex = 2147483648; });
     }
 
     function destroyCalculatorPanel() {
@@ -514,6 +459,280 @@
     }
 
     /* -------------------------
+       AI Chat (added) — toggle via Alt+5
+       - openOpenAI(), setupChat(), destroyChatPanel(), toggleOpenAI()
+       ------------------------- */
+
+    function openOpenAI() {
+        const existingPanel = document.getElementById('mp-aichat-panel');
+        if (existingPanel) {
+            existingPanel.style.display = '';
+            existingPanel.style.zIndex = 2147483648;
+            return;
+        }
+
+        const panel = document.createElement('div');
+        panel.id = 'mp-aichat-panel';
+        panel.style.cssText = `
+            position:fixed;left:12px;top:12px;width:420px;height:500px;z-index:2147483648;
+            background:#fff;color:#111;border-radius:8px;border:1px solid #bbb;
+            box-shadow:0 8px 30px rgba(0,0,0,.35);font-family:Arial,Helvetica,sans-serif;
+            box-sizing:border-box;user-select:none;padding:0;overflow:hidden;
+        `;
+
+        const header = document.createElement('div');
+        header.style.cssText = `
+            display:flex;align-items:center;justify-content:space-between;
+            background:#2b2f33;color:#fff;padding:8px 10px;cursor:grab;
+            font-weight:700;font-size:13px;
+        `;
+        header.innerHTML = `<span style="pointer-events:none;">AI Chat</span>`;
+
+        const headerBtns = document.createElement('div');
+        headerBtns.style.cssText = 'display:flex;gap:6px;align-items:center;';
+        const closeBtn = document.createElement('button');
+        closeBtn.title = 'Close';
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `
+            background:transparent;border:0;color:inherit;cursor:pointer;padding:2px 6px;
+            font-size:14px;
+        `;
+        headerBtns.appendChild(closeBtn);
+        header.appendChild(headerBtns);
+        panel.appendChild(header);
+
+        const chatContainer = document.createElement('div');
+        chatContainer.style.cssText = `
+            width:100%;height:calc(100% - 42px);display:flex;flex-direction:column;
+            background:#f2f3f5;
+        `;
+
+        const messagesArea = document.createElement('div');
+        messagesArea.id = 'mp-chat-messages';
+        messagesArea.style.cssText = `
+            flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;
+            overflow-y:auto;font-family:"Inter",Arial,sans-serif;
+        `;
+
+        const inputArea = document.createElement('div');
+        inputArea.style.cssText = `
+            display:flex;gap:8px;padding:10px;border-top:1px solid #e0e0e0;
+            background:#fff;align-items:flex-end;
+        `;
+
+        const textarea = document.createElement('textarea');
+        textarea.id = 'mp-chat-input';
+        textarea.placeholder = 'Type a message';
+        textarea.style.cssText = `
+            flex:1;min-height:44px;max-height:160px;padding:10px;border-radius:8px;
+            border:1px solid #ccc;resize:none;font-size:14px;outline:none;
+            line-height:1.3;font-family:inherit;margin-bottom:10px;
+        `;
+
+        const controls = document.createElement('div');
+        controls.style.cssText = 'display:flex;flex-direction:column;gap:8px;align-items:flex-end;justify-content:space-between;';
+
+        const sendBtn = document.createElement('button');
+        sendBtn.id = 'mp-send-btn';
+        sendBtn.textContent = 'Send';
+        sendBtn.style.cssText = `
+            background:#0078ff;color:#fff;border:none;border-radius:8px;
+            padding:10px 14px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:10px;
+        `;
+
+        controls.appendChild(sendBtn);
+        inputArea.appendChild(textarea);
+        inputArea.appendChild(controls);
+        chatContainer.appendChild(messagesArea);
+        chatContainer.appendChild(inputArea);
+        panel.appendChild(chatContainer);
+        document.body.appendChild(panel);
+
+        setupChat(messagesArea, textarea, sendBtn);
+
+        draggable(panel, header);
+
+        closeBtn.onclick = () => destroyChatPanel();
+
+        panel.addEventListener('mousedown', () => { panel.style.zIndex = 2147483648; });
+
+        textarea.focus();
+    }
+
+    function destroyChatPanel() {
+        try {
+            const panel = document.getElementById('mp-aichat-panel');
+            if (panel) panel.remove();
+        } catch (_) {}
+        try {
+            if (window.__mp_chat_controller) {
+                try { window.__mp_chat_controller.abort(); } catch(_) {}
+                window.__mp_chat_controller = null;
+            }
+        } catch(_) {}
+        console.log('AI Chat panel removed');
+    }
+
+    function toggleOpenAI() {
+        if (shouldDebounceToggle()) return console.log('toggleOpenAI: debounced');
+        const existing = document.getElementById('mp-aichat-panel');
+        if (existing) {
+            destroyChatPanel();
+            showStatus('AI Chat - OFF', '#ef4444');
+        } else {
+            openOpenAI();
+            showStatus('AI Chat - ON', '#10b981');
+        }
+    }
+
+    function setupChat(messagesArea, input, sendBtn) {
+        // NOTE: this uses the key and endpoint the user provided in the snippet.
+        const API_KEY = 'csk-nhykr5xjwe495twcvtx383wh3vnyj2n4x9nr26k56mje6jxr';
+        const ENDPOINT = 'https://api.cerebras.ai/v1/chat/completions';
+        const MODEL = 'gpt-oss-120b';
+        const SYSTEM_MESSAGE = "You are a friendly chatbot called MP Helper. You help with maths problems. MP stands for Math Pathways, as this is the program you are in. NEVER respond with math displaystyles or markdown, ONLY respond with plaintext. NEVER use displaystyle or math format or markdown. You are a part of MP Tools, a tool system for Math Pathways. For example, INSTEAD of doing this: (1 div 1 = 1), do THIS: 1/1 = 1 NEVER use math formatter. So, NEVER use LaTeX-style display math, instead always write math in plain text. Use emojis, NO MARKDOWN, and be excited and ready to help. Keep your responses short except if the user asks a maths problem walk them through it step by step.";
+
+        let messages = [];
+        let currentController = null;
+
+        function makeBubble(text, isUser) {
+            const bubble = document.createElement('div');
+            bubble.style.cssText = `
+                max-width:74%;padding:10px 14px;border-radius:16px;line-height:1.4;
+                word-wrap:break-word;box-shadow:0 1px 0 rgba(0,0,0,0.04);white-space:pre-wrap;
+                font-size:14px;align-self:${isUser ? 'flex-end' : 'flex-start'};
+                background:${isUser ? 'linear-gradient(180deg,#0b84ff,#0066d6)' : '#e6e9ee'};
+                color:${isUser ? '#fff' : '#111'};
+                border-bottom-${isUser ? 'right' : 'left'}-radius:6px;
+            `;
+            bubble.textContent = text;
+            return bubble;
+        }
+
+        function scrollToBottom() {
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        function renderMessages() {
+            messagesArea.innerHTML = '';
+            messages.forEach(msg => {
+                messagesArea.appendChild(makeBubble(msg.content, msg.role === 'user'));
+            });
+            scrollToBottom();
+        }
+
+        async function sendMessage() {
+            const text = input.value.trim().replace(/\u00a0/g, ' ');
+            if (!text) return;
+
+            const userMsg = { role: 'user', content: text };
+            messages.push(userMsg);
+            messagesArea.appendChild(makeBubble(text, true));
+            input.value = '';
+            scrollToBottom();
+
+            await streamAssistantResponse();
+        }
+
+        async function streamAssistantResponse() {
+            const payloadMessages = [
+                { role: 'system', content: SYSTEM_MESSAGE },
+                ...messages
+            ];
+
+            const assistantMsg = { role: 'assistant', content: '' };
+            messages.push(assistantMsg);
+            const assistantBubble = makeBubble('', false);
+            messagesArea.appendChild(assistantBubble);
+            scrollToBottom();
+
+            if (currentController) {
+                try { currentController.abort(); } catch(_) {}
+            }
+            const controller = new AbortController();
+            currentController = controller;
+            window.__mp_chat_controller = controller;
+
+            try {
+                const response = await fetch(ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + API_KEY
+                    },
+                    body: JSON.stringify({
+                        model: MODEL,
+                        stream: true,
+                        max_completion_tokens: 65536,
+                        temperature: 1,
+                        top_p: 1,
+                        messages: payloadMessages
+                    }),
+                    signal: controller.signal
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed || trimmed === 'data: [DONE]') continue;
+
+                        if (trimmed.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(trimmed.slice(6));
+                                if (data.choices?.[0]?.delta?.content) {
+                                    assistantMsg.content += data.choices[0].delta.content;
+                                    assistantBubble.textContent = assistantMsg.content;
+                                    scrollToBottom();
+                                }
+                            } catch (e) {
+                                console.log('Parse error:', e, 'on line:', trimmed);
+                            }
+                        }
+                    }
+                }
+
+                currentController = null;
+                assistantMsg.content = assistantMsg.content.trim();
+                renderMessages();
+
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    currentController = null;
+                    renderMessages();
+                } else {
+                    assistantMsg.content += '\n⚠️ Error: ' + err.message;
+                    currentController = null;
+                    renderMessages();
+                }
+            }
+        }
+
+        sendBtn.onclick = sendMessage;
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
+    /* -------------------------
        Keyboard Shortcuts Setup (improved)
        ------------------------- */
     function setupKeyboardShortcuts() {
@@ -523,18 +742,16 @@
         }
         window.__mpToolsKeyboardSetup = true;
 
-        // Debounce guard shared for whole keyboard handling
         window.__mpToolsLastKeyAt = window.__mpToolsLastKeyAt || 0;
 
         document.addEventListener('keydown', function(e) {
-            // Basic guard to avoid handling repeated keydown events too quickly
             const now = Date.now();
             if (now - window.__mpToolsLastKeyAt < 150) return;
-            // Use physical key code (avoids locale surprises). Fallback to e.key if needed.
             const isDigit1 = e.code === 'Digit1' || e.key === '1';
             const isDigit2 = e.code === 'Digit2' || e.key === '2';
             const isDigit3 = e.code === 'Digit3' || e.key === '3';
             const isDigit4 = e.code === 'Digit4' || e.key === '4';
+            const isDigit5 = e.code === 'Digit5' || e.key === '5';
 
             if (e.altKey && isDigit1) {
                 e.preventDefault();
@@ -556,6 +773,11 @@
                 window.__mpToolsLastKeyAt = now;
                 console.log('Alt+4 pressed => toggling calculator');
                 toggleCalculator();
+            } else if (e.altKey && isDigit5) {
+                e.preventDefault();
+                window.__mpToolsLastKeyAt = now;
+                console.log('Alt+5 pressed => toggling AI Chat');
+                toggleOpenAI();
             }
         }, true);
     }
@@ -564,26 +786,59 @@
        Initialize on load
        ------------------------- */
     function initialize() {
-        // Show activation message
         showActivated();
-        
-        // Setup keyboard shortcuts
         setupKeyboardShortcuts();
-        
-        // Apply saved states
-        if (window.__mpToolsState.speedrunner) {
-            startSpeedrunner();
-        }
-        if (window.__mpToolsState.rightClick) {
-            enableRightClickAndSelect();
-        }
-        if (window.__mpToolsState.removeAnnoying) {
-            enableremoveAnnoying();
-        }
-        
-        console.log('MP-Tools activated - Use Alt+1, Alt+2, Alt+3 to toggle features; Alt+4 toggles Calculator');
+        if (window.__mpToolsState.speedrunner) startSpeedrunner();
+        if (window.__mpToolsState.rightClick) enableRightClickAndSelect();
+        if (window.__mpToolsState.removeAnnoying) enableremoveAnnoying();
+        console.log('MP-Tools activated - Use Alt+1, Alt+2, Alt+3 to toggle features; Alt+4 toggles Calculator; Alt+5 toggles AI Chat');
     }
 
     // Run initialization
     initialize();
+
+    /* -------------------------
+       Minimal helpers (UI used by other code)
+       ------------------------- */
+    function draggable(panel, handle) {
+        let dragging = false, ox = 0, oy = 0;
+        const move = e => {
+            const x = e.clientX ?? e.touches?.[0]?.clientX;
+            const y = e.clientY ?? e.touches?.[0]?.clientY;
+            if (!dragging || x == null) return;
+            panel.style.left = (x - ox) + 'px';
+            panel.style.top = (y - oy) + 'px';
+            panel.style.right = '';
+        };
+        const up = () => {
+            dragging = false;
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', up);
+            document.removeEventListener('touchmove', move);
+            document.removeEventListener('touchend', up);
+            if (handle) handle.style.cursor = 'grab';
+        };
+        handle.addEventListener('mousedown', e => {
+            dragging = true;
+            const r = panel.getBoundingClientRect();
+            ox = e.clientX - r.left;
+            oy = e.clientY - r.top;
+            document.addEventListener('mousemove', move);
+            document.addEventListener('mouseup', up);
+            handle.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+        handle.addEventListener('touchstart', e => {
+            dragging = true;
+            const t = e.touches[0];
+            const r = panel.getBoundingClientRect();
+            ox = t.clientX - r.left;
+            oy = t.clientY - r.top;
+            document.addEventListener('touchmove', move);
+            document.addEventListener('touchend', up);
+            handle.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+    }
+
 })();
