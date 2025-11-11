@@ -303,6 +303,7 @@
        - No close button in header
        - Toggle via Alt+4
        - CSS sized to avoid clipping / extra bottom space
+       - Shows "Loading..." until Desmos initialises
        ------------------------- */
 
     function ensureDesmos() {
@@ -323,6 +324,10 @@
         try {
             const el = document.getElementById('mp-desmos-body-calc');
             if (!el) return;
+            // remove loading indicator if present (we'll also remove after creating instance)
+            const preLoad = document.getElementById('mp-desmos-loading');
+            if (preLoad) preLoad.remove();
+
             if (window.__mp_desmos_instance) {
                 try { if (typeof window.__mp_desmos_instance.update === 'function') window.__mp_desmos_instance.update(); } catch(_) {}
                 return;
@@ -330,9 +335,29 @@
             window.__mp_desmos_instance = Desmos && Desmos.ScientificCalculator
                 ? Desmos.ScientificCalculator(el, { keypad: true })
                 : null;
-            if (!window.__mp_desmos_instance) console.error('Desmos object not available or API changed');
+
+            // Remove loading placeholder if it still exists
+            const ld = document.getElementById('mp-desmos-loading');
+            if (ld) ld.remove();
+
+            if (!window.__mp_desmos_instance) {
+                console.error('Desmos object not available or API changed');
+                const errNotice = document.createElement('div');
+                errNotice.style.cssText = 'padding:10px;color:#900;font-weight:700;';
+                errNotice.textContent = 'Desmos failed to initialize.';
+                el.appendChild(errNotice);
+            }
         } catch (err) {
             console.error('Error initialising Desmos', err);
+            const ld = document.getElementById('mp-desmos-loading');
+            if (ld) ld.remove();
+            const el = document.getElementById('mp-desmos-body-calc');
+            if (el) {
+                const errNotice = document.createElement('div');
+                errNotice.style.cssText = 'padding:10px;color:#900;font-weight:700;';
+                errNotice.textContent = 'Desmos failed to initialize.';
+                el.appendChild(errNotice);
+            }
         }
     }
 
@@ -373,8 +398,20 @@
         const desmosContainer = document.createElement('div');
         desmosContainer.id = 'mp-desmos-body-calc';
         desmosContainer.style.cssText = `
-            width:100%;height:100%;border-radius:6px;overflow:hidden;
+            width:100%;height:100%;border-radius:6px;overflow:hidden;display:flex;align-items:stretch;
         `;
+
+        // TEMP loading notice (will be removed when Desmos initialised or on error)
+        const loadingNotice = document.createElement('div');
+        loadingNotice.id = 'mp-desmos-loading';
+        loadingNotice.style.cssText = `
+            width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+            font-size:16px;color:#555;font-weight:700;font-family:Arial,Helvetica,sans-serif;
+            background:transparent;
+        `;
+        loadingNotice.textContent = 'Loading... ⏳';
+        desmosContainer.appendChild(loadingNotice);
+
         body.appendChild(desmosContainer);
         panel.appendChild(body);
         document.body.appendChild(panel);
@@ -420,19 +457,28 @@
             });
         })();
 
+        // load & init desmos; on failure replace loading with error notice
         ensureDesmos().then(initDesmos).catch(err => {
             console.error('Failed to load Desmos calculator:', err);
-            const errNotice = document.createElement('div');
-            errNotice.style.cssText = 'padding:10px;color:#900;font-weight:700;';
-            errNotice.textContent = 'Desmos failed to load.';
-            const bodyEl = document.getElementById('mp-desmos-body');
-            bodyEl && bodyEl.appendChild(errNotice);
+            const ld = document.getElementById('mp-desmos-loading');
+            if (ld) ld.remove();
+            const bodyEl = document.getElementById('mp-desmos-body-calc');
+            if (bodyEl) {
+                const errNotice = document.createElement('div');
+                errNotice.style.cssText = 'padding:10px;color:#900;font-weight:700;';
+                errNotice.textContent = 'Desmos failed to load.';
+                bodyEl.appendChild(errNotice);
+            }
         });
 
         panel.addEventListener('mousedown', () => { panel.style.zIndex = 2147483648; });
     }
 
     function destroyCalculatorPanel() {
+        try {
+            const ld = document.getElementById('mp-desmos-loading');
+            if (ld) ld.remove();
+        } catch(_) {}
         try {
             const panel = document.getElementById('mp-desmos-panel');
             if (panel) panel.remove();
