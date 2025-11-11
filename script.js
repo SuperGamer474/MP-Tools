@@ -516,7 +516,7 @@
         textarea.style.cssText = `
             flex:1;min-height:44px;max-height:160px;padding:10px;border-radius:8px;
             border:1px solid #ccc;resize:none;font-size:14px;outline:none;
-            line-height:1.3;font-family:inherit;margin-bottom:10px;
+            line-height:1.3;font-family:inherit;
         `;
 
         const controls = document.createElement('div');
@@ -527,7 +527,7 @@
         sendBtn.textContent = 'Send';
         sendBtn.style.cssText = `
             background:#0078ff;color:#fff;border:none;border-radius:8px;
-            padding:10px 14px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:10px;
+            padding:10px 14px;cursor:pointer;font-weight:600;font-family:inherit;
         `;
 
         controls.appendChild(sendBtn);
