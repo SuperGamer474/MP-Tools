@@ -50,40 +50,47 @@
 
     let progressObserver = null;
 
+    function applyThemeToBar(bar, theme) {
+        const width = bar.style.width || '0%';
+        bar.style.cssText = `
+            width: ${width};
+            padding-top: ${theme.text ? '5px' : '0'};
+            background: ${theme.gradient};
+            text-align: center;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        `;
+        bar.innerHTML = theme.text ? `<b>${theme.text}</b>` : '';
+    }
+
     function applyProgressTheme() {
         if (progressObserver) progressObserver.disconnect();
 
         const theme = THEMES[window.__mpToolsState.progressTheme];
 
-        progressObserver = new MutationObserver(() => {
-            document.querySelectorAll('div.progress-inner').forEach(bar => {
-                const width = bar.style.width;
-                bar.style.cssText = `
-                    width: ${width};
-                    padding-top: ${theme.text ? '5px' : '0'};
-                    background: ${theme.gradient};
-                    text-align: center;
-                    font-weight: bold;
-                    color: white;
-                    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-                `;
-                bar.innerHTML = theme.text ? `<b>${theme.text}</b>` : '';
-            });
-        });
-
         // Initial apply
-        document.querySelectorAll('div.progress-inner').forEach(bar => {
-            const width = bar.style.width || '0%';
-            bar.style.cssText = `
-                width: ${width};
-                padding-top: ${theme.text ? '5px' : '0'};
-                background: ${theme.gradient};
-                text-align: center;
-                font-weight: bold;
-                color: white;
-                text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            `;
-            bar.innerHTML = theme.text ? `<b>${theme.text}</b>` : '';
+        document.querySelectorAll('div.progress-inner').forEach(bar => applyThemeToBar(bar, theme));
+
+        progressObserver = new MutationObserver(mutations => {
+            mutations.forEach(m => {
+                if (m.type === 'childList') {
+                    m.addedNodes.forEach(node => {
+                        if (node.nodeType !== 1) return;
+                        if (node.classList && node.classList.contains('progress-inner')) {
+                            applyThemeToBar(node, theme);
+                        }
+                        if (node.querySelectorAll) {
+                            node.querySelectorAll('div.progress-inner').forEach(bar => applyThemeToBar(bar, theme));
+                        }
+                    });
+                } else if (m.type === 'attributes' && m.attributeName === 'style') {
+                    const t = m.target;
+                    if (t.classList && t.classList.contains('progress-inner')) {
+                        applyThemeToBar(t, theme);
+                    }
+                }
+            });
         });
 
         progressObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
@@ -384,11 +391,7 @@
             window.__removeAnnoyingObserver = null;
         }
 
-        window.__removeAnnoyingInterval = setInterval(() => {
-            try { document.querySelectorAll('.question-blur').forEach(el => el.classList.remove('question-blur')); } catch(_) {}
-            try { document.querySelectorAll('.cdk-overlay-container').forEach(el => el.remove()); } catch(_) {}
-            try { document.querySelectorAll('div.red-stuff').forEach(el => el.classList.remove('red-stuff')); } catch(_) {}
-        }, 300);
+        // Removed the setInterval to reduce polling and potential freezes
 
         console.log('Remove Annoying ON — stripping question-blur, removing overlays, and removing red-stuff class from divs');
     }
@@ -397,7 +400,6 @@
         if (!window.__removeAnnoyingEnabled) return console.log('Remove Annoying already disabled');
         window.__removeAnnoyingEnabled = false;
         try { if (window.__removeAnnoyingObserver) { window.__removeAnnoyingObserver.disconnect(); window.__removeAnnoyingObserver = null; } } catch(_) {}
-        try { if (window.__removeAnnoyingInterval) { clearInterval(window.__removeAnnoyingInterval); window.__removeAnnoyingInterval = null; } } catch(_) {}
         console.log('Remove Annoying OFF');
     }
 
@@ -1025,4 +1027,4 @@
         });
     }
 
-})(); 
+})();
