@@ -45,7 +45,10 @@
         brimblecombe:{ gradient: 'linear-gradient(red, maroon)',               text: 'BRIMBLECOMBE' },
         baldock:     { gradient: 'linear-gradient(limegreen, green)',         text: 'BALDOCK' },
         warren:      { gradient: 'linear-gradient(skyblue, blue)',            text: 'WARREN' },
-        white:       { gradient: 'linear-gradient(yellow, orange)',           text: 'WHITE' }
+        white:       { gradient: 'linear-gradient(yellow, orange)',           text: 'WHITE' },
+        christmas:       { gradient: 'linear-gradient(white, silver, green, red)',           text: 'CHRISTMAS' },
+        halloween:       { gradient: 'linear-gradient(white, yellow, orange, black)',           text: 'HALLOWEEN' },
+        easter:       { gradient: 'linear-gradient(white, pink, orange, red, brown)',           text: 'EASTER' }
     };
 
     function applyThemeToBar(bar, theme) {
