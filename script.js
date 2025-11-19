@@ -82,7 +82,7 @@
         },
          space: {
             gradient: 'linear-gradient(#00BCBC, lightblue, lightblue, lightyellow, lightyellow)',
-            emojis = ['✦', '⭑', '🛸', '˚', '☆', '⋆', '🛰', '⭑', '🌎', '✦', '✦', '⭑', '🛸', '⭑', 'SPACE']
+            emojis: ['✦', '⭑', '🛸', '˚', '☆', '⋆', '🛰', '⭑', '🌎', '✦', '✦', '⭑', '🛸', '⭑', 'SPACE']
          }
     };
     function applyThemeToBar(bar, theme) {
